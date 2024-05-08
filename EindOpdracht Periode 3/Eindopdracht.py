@@ -1,24 +1,21 @@
 import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
-import PIL
 import tensorflow as tf
 from tensorflow import keras
 from keras import layers
 from keras.models import Sequential
-from PIL import Image
 import h5py
-import PIL
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 
 matplotlib.use('TkAgg')
 
 
-def store_normalized_data(train_data, test_data):
+def train_model(train_data, test_data):
     batch_size = 150
     img_height = 96
     img_width = 96
+
+    tf.config.list_devices(device_type="GPU")
 
     train_data = train_data.batch(batch_size)
     test_data = test_data.batch(batch_size)
@@ -51,11 +48,11 @@ def store_normalized_data(train_data, test_data):
 
 
     model.compile(loss='binary_crossentropy',
-              optimizer='rmsprop',
+              optimizer='adam',
               metrics=['accuracy'])
     model.summary()
 
-    epochs = 1
+    epochs = 5
     history = model.fit(
         train_data,
         validation_data=test_data,
@@ -78,30 +75,27 @@ def store_normalized_data(train_data, test_data):
 
     plot_roc_curve(y_true, y_score)
 
-    # plt.figure(figsize=(8, 8))
-    # plt.subplot(1, 2, 1)
-    # plt.plot(epochs_range, acc, label='Training Accuracy')
-    # plt.plot(epochs_range, val_acc, label='Validation Accuracy')
-    # plt.legend(loc='lower right')
-    # plt.title('Training and Validation Accuracy')
-    #
-    # plt.subplot(1, 2, 2)
-    # plt.plot(epochs_range, loss, label='Training Loss')
-    # plt.plot(epochs_range, val_loss, label='Validation Loss')
-    # plt.legend(loc='upper right')
-    # plt.title('Training and Validation Loss')
-    # plt.show()
+    plt.figure(figsize=(8, 8))
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs_range, acc, label='Training Accuracy')
+    plt.plot(epochs_range, val_acc, label='Validation Accuracy')
+    plt.legend(loc='lower right')
+    plt.title('Training and Validation Accuracy')
+
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs_range, loss, label='Training Loss')
+    plt.plot(epochs_range, val_loss, label='Validation Loss')
+    plt.legend(loc='upper right')
+    plt.title('Training and Validation Loss')
+    plt.show()
 
 
-def normalize_and_configure(train_ds, labels_training, test_ds, labels_testing):
-    normalization_layer = tf.keras.layers.Rescaling(1. / 255)
-
+def format_dataset(train_ds, labels_training, test_ds, labels_testing):
     # Assuming train_ds and test_ds are NumPy arrays
-    train_ds = tf.data.Dataset.from_tensor_slices((train_ds, labels_training))
-    test_ds = tf.data.Dataset.from_tensor_slices((test_ds, labels_testing))
-    normalized_train_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
-    normalized_test_ds = test_ds.map(lambda x, y: (normalization_layer(x), y))
-    store_normalized_data(normalized_train_ds, normalized_test_ds)
+    train_ds_ = tf.data.Dataset.from_tensor_slices((train_ds, labels_training))
+    test_ds_ = tf.data.Dataset.from_tensor_slices((test_ds, labels_testing))
+
+    return train_ds_, test_ds_
 
 
 def configure_dataset():
@@ -110,30 +104,36 @@ def configure_dataset():
     file_train_labels = h5py.File("train/camelyonpatch_level_2_split_train_y.h5", "r")
     file_test_pictures = h5py.File("test/camelyonpatch_level_2_split_test_x.h5", "r")
     file_test_labels = h5py.File("test/camelyonpatch_level_2_split_test_y.h5", "r")
-    # Training
+
+    # Training dataframes.
     dset_train_pictures = file_train_pictures["x"]
     dset_train_labels = file_train_labels["y"]
-    # Test
+
+    # Test dataframes.
     dset_test_pictures = file_test_pictures["x"]
     dset_test_labels = file_test_labels["y"]
 
+    # Store the different training and testing labels.
     labels_training = []
     labels_testing = []
+
+    # Gets the different items from the training set labels.
     for item in dset_train_labels:
         labels_training.append(item[0][0][0])
 
+    # Gets the different items from the testing set labels.
     for item in dset_test_labels:
         labels_testing.append(item[0][0][0])
 
-
-    normalize_and_configure(dset_train_pictures, labels_training, dset_test_pictures, labels_testing)
+    return dset_train_pictures, labels_training, dset_test_pictures, labels_testing
 
 
 def plot_roc_curve(y_true, y_score):
-    # Assuming y_true are true labels and y_score are predicted probabilities
+    # With the y_true being the
     fpr, tpr, thresholds = roc_curve(y_true, y_score)
     roc_auc = auc(fpr, tpr)
-    # Plot ROC curve
+
+    # Plot ROC curves
     plt.figure()
     plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
     plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
@@ -147,4 +147,8 @@ def plot_roc_curve(y_true, y_score):
 
 
 if __name__ == '__main__':
-    configure_dataset()
+    with tf.device("/GPU:0"):
+        dset_train_pictures, labels_training, dset_test_pictures, labels_testing = configure_dataset()
+        train_ds, test_ds = format_dataset(dset_train_pictures, labels_training,
+                                                dset_test_pictures, labels_testing)
+        train_model(train_ds, test_ds)

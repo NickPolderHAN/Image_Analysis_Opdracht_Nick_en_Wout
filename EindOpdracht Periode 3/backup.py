@@ -51,11 +51,11 @@ def store_normalized_data(train_data, test_data):
 
 
     model.compile(loss='binary_crossentropy',
-              optimizer='adam',
+              optimizer='rmsprop',
               metrics=['accuracy'])
     model.summary()
 
-    epochs = 5
+    epochs = 1
     history = model.fit(
         train_data,
         validation_data=test_data,
@@ -78,53 +78,55 @@ def store_normalized_data(train_data, test_data):
 
     plot_roc_curve(y_true, y_score)
 
-    plt.figure(figsize=(8, 8))
-    plt.subplot(1, 2, 1)
-    plt.plot(epochs_range, acc, label='Training Accuracy')
-    plt.plot(epochs_range, val_acc, label='Validation Accuracy')
-    plt.legend(loc='lower right')
-    plt.title('Training and Validation Accuracy')
-
-    plt.subplot(1, 2, 2)
-    plt.plot(epochs_range, loss, label='Training Loss')
-    plt.plot(epochs_range, val_loss, label='Validation Loss')
-    plt.legend(loc='upper right')
-    plt.title('Training and Validation Loss')
-    plt.show()
+    # plt.figure(figsize=(8, 8))
+    # plt.subplot(1, 2, 1)
+    # plt.plot(epochs_range, acc, label='Training Accuracy')
+    # plt.plot(epochs_range, val_acc, label='Validation Accuracy')
+    # plt.legend(loc='lower right')
+    # plt.title('Training and Validation Accuracy')
+    #
+    # plt.subplot(1, 2, 2)
+    # plt.plot(epochs_range, loss, label='Training Loss')
+    # plt.plot(epochs_range, val_loss, label='Validation Loss')
+    # plt.legend(loc='upper right')
+    # plt.title('Training and Validation Loss')
+    # plt.show()
 
 
 def normalize_and_configure(train_ds, labels_training, test_ds, labels_testing):
-    # normalization_layer = tf.keras.layers.Rescaling(1. / 255)
+    normalization_layer = tf.keras.layers.Rescaling(1. / 255)
 
     # Assuming train_ds and test_ds are NumPy arrays
     train_ds = tf.data.Dataset.from_tensor_slices((train_ds, labels_training))
     test_ds = tf.data.Dataset.from_tensor_slices((test_ds, labels_testing))
-
-    store_normalized_data(train_ds, test_ds)
+    normalized_train_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
+    normalized_test_ds = test_ds.map(lambda x, y: (normalization_layer(x), y))
+    store_normalized_data(normalized_train_ds, normalized_test_ds)
 
 
 def configure_dataset():
-    # x zijn de plaatjes, y zijn de binaire labels (wel of niet)
-    file_train_pictures = h5py.File("train/camelyonpatch_level_2_split_train_x.h5", "r")
-    file_train_labels = h5py.File("train/camelyonpatch_level_2_split_train_y.h5", "r")
-    file_test_pictures = h5py.File("test/camelyonpatch_level_2_split_test_x.h5", "r")
-    file_test_labels = h5py.File("test/camelyonpatch_level_2_split_test_y.h5", "r")
-    # Training
-    dset_train_pictures = file_train_pictures["x"]
-    dset_train_labels = file_train_labels["y"]
-    # Test
-    dset_test_pictures = file_test_pictures["x"]
-    dset_test_labels = file_test_labels["y"]
+            # x zijn de plaatjes, y zijn de binaire labels (wel of niet)
+            file_train_pictures = h5py.File("train/camelyonpatch_level_2_split_train_x.h5", "r")
+            file_train_labels = h5py.File("train/camelyonpatch_level_2_split_train_y.h5", "r")
+            file_test_pictures = h5py.File("test/camelyonpatch_level_2_split_test_x.h5", "r")
+            file_test_labels = h5py.File("test/camelyonpatch_level_2_split_test_y.h5", "r")
+            # Training
+            dset_train_pictures = file_train_pictures["x"]
+            dset_train_labels = file_train_labels["y"]
+            # Test
+            dset_test_pictures = file_test_pictures["x"]
+            dset_test_labels = file_test_labels["y"]
 
-    labels_training = []
-    labels_testing = []
-    for item in dset_train_labels:
-        labels_training.append(item[0][0][0])
+            labels_training = []
+            labels_testing = []
+            for item in dset_train_labels:
+                labels_training.append(item[0][0][0])
 
-    for item in dset_test_labels:
-        labels_testing.append(item[0][0][0])
+            for item in dset_test_labels:
+                labels_testing.append(item[0][0][0])
 
-    normalize_and_configure(dset_train_pictures, labels_training, dset_test_pictures, labels_testing)
+
+            normalize_and_configure(dset_train_pictures, labels_training, dset_test_pictures, labels_testing)
 
 
 def plot_roc_curve(y_true, y_score):
