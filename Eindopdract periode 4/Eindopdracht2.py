@@ -1,5 +1,5 @@
 import keras
-from keras import layers, Sequential
+from keras import layers, Sequential, Input
 from medmnist import ChestMNIST
 import tensorflow as tf
 import numpy as np
@@ -42,9 +42,11 @@ def get_dataset():
 
 
 def merge_picture_and_label(picture_train, labels_train, picture_test, labels_test):
+    batch_size = 100
     train_ds_ = tf.data.Dataset.from_tensor_slices((np.array(picture_train), np.array(labels_train)))  # Convert to numpy array
     test_ds_ = tf.data.Dataset.from_tensor_slices((np.array(picture_test), np.array(labels_test)))  # Convert to numpy array
-
+    train_ds_ = train_ds_.batch(batch_size)
+    test_ds_ = test_ds_.batch(batch_size)
     return train_ds_, test_ds_
 
 
@@ -63,14 +65,15 @@ def model_training(train_data, test_data):
     )
 
     model = Sequential([
-        layers.Rescaling(1. / 255, input_shape=(img_height, img_width, 3)),
+        Input(shape=(img_height, img_width, 1)),
+        layers.Rescaling(1. / 255),
         layers.Conv2D(4, 3, padding='same', activation='relu'),
         layers.MaxPooling2D(),
         layers.Conv2D(8, 3, padding='same', activation='relu'),
         layers.MaxPooling2D(),
         layers.Conv2D(16, 3, padding='same', activation='relu'),
         layers.MaxPooling2D(),
-        layers.Dropout(0.2),
+        layers.Dropout(0.4),
         layers.Flatten(),
         layers.Dense(32, activation='relu'),
         layers.Dense(1, activation="sigmoid")
@@ -82,7 +85,7 @@ def model_training(train_data, test_data):
     model.summary()
 
     # Fitting the model.
-    epochs = 5
+    epochs = 20
     history = model.fit(
         train_data,
         validation_data=test_data,
