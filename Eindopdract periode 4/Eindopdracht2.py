@@ -4,6 +4,8 @@ from medmnist import ChestMNIST
 import tensorflow as tf
 import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_curve, auc
+import matplotlib.pyplot as plt
 
 def get_dataset():
     # Lists to store pictures and labels
@@ -12,7 +14,6 @@ def get_dataset():
 
     # Data ophalen en splitsen in train en test sets.
     dataset_train = ChestMNIST(split='train', download=True, size=128)
-    dataset_test = ChestMNIST(split='test', download=True, size=128)
 
     # Populate pictures and labels for training
     for image, label in dataset_train:
@@ -52,7 +53,6 @@ def model_training(train_data, test_data):
         [
             layers.experimental.preprocessing.RandomFlip("horizontal"),
             layers.experimental.preprocessing.RandomRotation(0.1),
-            layers.experimental.preprocessing.RandomZoom(0.1),
         ]
     )
 
@@ -88,12 +88,37 @@ def model_training(train_data, test_data):
     model.summary()
 
     # Fitting the model.
-    epochs = 5
+    epochs = 10
     history = model.fit(
         train_data,
         validation_data=test_data,
         epochs=epochs
     )
+    return model
+
+
+def evaluate_model_performance(cnn_learn_model, validatie_set):
+    predictions = cnn_learn_model.predict(test_data)
+
+    y_score = predictions.flatten()
+    y_true = test_data.map(lambda x, y: y).unbatch()  # Extract true labels
+    y_true = [label.numpy() for label in y_true]
+
+    # With the y_true being the
+    fpr, tpr, thresholds = roc_curve(y_true, y_score)
+    roc_auc = auc(fpr, tpr)
+
+    # Plot ROC curves
+    plt.figure()
+    plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic (ROC)')
+    plt.legend(loc="lower right")
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -104,4 +129,5 @@ if __name__ == '__main__':
                                                             labels_valid,
                                                             pictures_test,
                                                             labels_test)
-    model_training(train_data, test_data)
+    cnn_model = model_training(train_data, test_data)
+    evaluate_model_performance(cnn_model, val_ds)
