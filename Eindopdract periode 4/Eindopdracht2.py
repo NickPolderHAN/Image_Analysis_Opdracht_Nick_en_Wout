@@ -12,15 +12,22 @@ from sklearn.metrics import roc_curve, auc
 
 def get_dataset():
     """
+    Gathers the training dataset and splits the test and validation subsets from it.
 
     :return:
+    - pictures_train -> Contains the pictures used for training.
+    - labels_train -> Contains the labels used for training.
+    - pictures_valid -> Contains the pictures used for validation.
+    - labels_valid -> Contains the labels used for validation.
+    - pictures_test -> Contains the pictures used for testing.
+    - labels_test -> Contains the labels used for testing.
     """
     # Lists to store pictures and labels
     pictures = []
     labels = []
     # Data ophalen en splitsen in train en test sets.
     dataset_train = ChestMNIST(split='train', download=True, size=128)
-    dataset_test = ChestMNIST(split='test', download=True, size=128)
+
     # Populate pictures and labels for training
     for image, label in dataset_train:
         pictures.append(np.array(image))
@@ -35,16 +42,22 @@ def get_dataset():
     return pictures_train, labels_train, pictures_valid, labels_valid, pictures_test, labels_test
 
 
-def merge_picture_and_label(pictures_train, labels_train, pictures_valid, labels_valid, pictures_test, labels_test):
+def merge_picture_and_label(pictures_train, labels_train, pictures_valid,
+                            labels_valid, pictures_test, labels_test):
     """
+    Merges the labels and pictures of the training, testing and validation sets together
+    into their own respective sets.
 
-    :param pictures_train:
-    :param labels_train:
-    :param pictures_valid:
-    :param labels_valid:
-    :param pictures_test:
-    :param labels_test:
+    :param pictures_train: Contains the training pictures.
+    :param labels_train: Contains the labels for training.
+    :param pictures_valid: Contains the pictures for validation.
+    :param labels_valid: Contains the labels for validation.
+    :param pictures_test: Contains the pictures for testing.
+    :param labels_test: Contains the labels for testing.
     :return:
+    - train_ds_ -> Contains the training dataset
+    - test_ds_ -> Contains the test dataset.
+    - val_ds_ -> Contains the validation dataset.
     """
     batch_size = 100
 
@@ -69,10 +82,16 @@ def merge_picture_and_label(pictures_train, labels_train, pictures_valid, labels
 
 def model_training(train_data, test_data):
     """
+    Trains a Convolutional Neural Network (CNN) model on the provided training dataset
+    and evaluates it on the test dataset.
 
-    :param train_data:
-    :param test_data:
-    :return:
+    :param train_data: tf.data.Dataset
+        The training dataset containing image data and corresponding labels.
+
+    :param test_data: tf.data.Dataset
+        The test dataset containing image data and corresponding labels.
+
+    :return: None
     """
     # Store image sizes.
     img_height = 128
@@ -166,10 +185,16 @@ def model_training(train_data, test_data):
 
 def plot_roc_curve(y_true, y_score):
     """
+    Plots the ROC curve of a trained model using the true labels and predicted scores.
 
-    :param y_true:
-    :param y_score:
-    :return:
+    :param y_true: array-like of shape (n_samples,)
+        True binary labels. Values should be either 0 or 1.
+
+    :param y_score: array-like of shape (n_samples,)
+        Target scores, which can either be probability estimates of the positive class,
+        confidence values, or binary decisions.
+
+    :return: None
     """
     # With the y_true being the
     fpr, tpr, thresholds = roc_curve(y_true, y_score)
