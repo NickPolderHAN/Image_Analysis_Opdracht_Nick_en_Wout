@@ -83,7 +83,7 @@ def merge_picture_and_label(pictures_train, labels_train, pictures_valid,
 def model_training(train_data, test_data):
     """
     Trains a Convolutional Neural Network (CNN) model on the provided training dataset
-    and evaluates it on the test dataset.
+    and evaluates its performance on the test dataset.
 
     :param train_data: tf.data.Dataset
         The training dataset containing image data and corresponding labels.
